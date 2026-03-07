@@ -1,0 +1,59 @@
+name: Build TrollStore IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14   # Using macos-14 for latest stable Xcode
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Expo Prebuild
+        run: npx expo prebuild --platform ios --clean
+
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install
+
+      - name: Build IPA for TrollStore
+        run: |
+          cd ios
+          WORKSPACE=$(find . -maxdepth 1 -name "*.xcworkspace" -print -quit)
+          SCHEME=$(xcodebuild -workspace "$WORKSPACE" -list | awk '/Schemes:/{for(i=1;i<=3;i++){getline; if ($1 != "") {print $1; exit}}}' )
+          echo "Building Workspace: $WORKSPACE with Scheme: $SCHEME"
+          
+          xcodebuild clean build \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath derivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
+
+          # Create Payload folder and move .app
+          mkdir -p Payload
+          APP_DIR=$(find derivedData/Build/Products/Release-iphoneos -name "*.app" -type d -print -quit)
+          mv "$APP_DIR" Payload/
+          zip -qr -9 app.ipa Payload
+          mv app.ipa ../TapCount_TrollStore.ipa
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TapCount_TrollStore_IPA
+          path: TapCount_TrollStore.ipa
