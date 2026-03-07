@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14   # Using macos-14 for latest stable Xcode
+    runs-on: macos-15   # Using macos-15 for Xcode 16+ support
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
