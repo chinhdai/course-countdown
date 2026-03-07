@@ -54,7 +54,9 @@ export default function HomeScreen({ courses, onSelectCourse, onAddNew }) {
                     onPress={onAddNew}
                     activeOpacity={0.8}
                 >
-                    <Plus size={32} color="#FFF" />
+                    <View pointerEvents="none">
+                        <Plus size={32} color="#FFF" />
+                    </View>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
@@ -157,6 +159,8 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
+        zIndex: 10,
+        elevation: 10,
         ...theme.shadows.button,
     }
 });

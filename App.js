@@ -63,7 +63,7 @@ export default function App() {
     }
   };
 
-  const handleIncrement = async () => {
+  const handleIncrement = () => {
     try {
       const updatedCourses = courses.map(c => {
         if (c.id === selectedCourseId && c.daysCounted < c.totalDays) {
@@ -72,7 +72,7 @@ export default function App() {
         return c;
       });
       setCourses(updatedCourses);
-      await AsyncStorage.setItem('@courses', JSON.stringify(updatedCourses));
+      AsyncStorage.setItem('@courses', JSON.stringify(updatedCourses)).catch(e => console.error(e));
     } catch (e) {
       console.error('Failed to update count', e);
     }

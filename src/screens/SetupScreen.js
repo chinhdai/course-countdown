@@ -61,7 +61,9 @@ export default function SetupScreen({ onSetupComplete, onCancel, hasCourses }) {
                     >
                         {hasCourses && (
                             <TouchableOpacity style={styles.backButton} onPress={onCancel}>
-                                <ArrowLeft size={24} color={theme.colors.text} />
+                                <View pointerEvents="none">
+                                    <ArrowLeft size={24} color={theme.colors.text} />
+                                </View>
                             </TouchableOpacity>
                         )}
                         <View style={styles.inner}>

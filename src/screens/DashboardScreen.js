@@ -89,11 +89,15 @@ export default function DashboardScreen({ course, onIncrement, onDelete, onBack 
                 {/* Header */}
                 <View style={styles.header}>
                     <TouchableOpacity onPress={onBack} style={styles.iconButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <ArrowLeft size={24} color={theme.colors.text} />
+                        <View pointerEvents="none">
+                            <ArrowLeft size={24} color={theme.colors.text} />
+                        </View>
                     </TouchableOpacity>
                     <Text style={styles.headerTitle} numberOfLines={1}>{course.name}</Text>
                     <TouchableOpacity onPress={handleDeleteConfirm} style={[styles.iconButton, { backgroundColor: theme.colors.danger + '1A' }]} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Trash2 size={20} color={theme.colors.danger} />
+                        <View pointerEvents="none">
+                            <Trash2 size={20} color={theme.colors.danger} />
+                        </View>
                     </TouchableOpacity>
                 </View>
 
@@ -136,7 +140,7 @@ export default function DashboardScreen({ course, onIncrement, onDelete, onBack 
                                 activeOpacity={0.7}
                                 onPress={handleTap}
                             >
-                                <View style={styles.tapButtonOuter}>
+                                <View style={styles.tapButtonOuter} pointerEvents="none">
                                     <View style={styles.tapButtonInner}>
                                         <Hand size={48} color="#FFF" />
                                         <Text style={styles.tapButtonText}>Điểm Danh</Text>
