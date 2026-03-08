@@ -13,7 +13,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.manh1.tapcount"
+      "bundleIdentifier": "com.manhnv.coursecountdown"
     },
     "android": {
       "adaptiveIcon": {
