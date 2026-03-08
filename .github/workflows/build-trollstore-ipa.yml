@@ -3,6 +3,9 @@ name: Build course-countdown TrollStore IPA
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-15   # Using macos-15 for Xcode 16+ support
@@ -50,10 +53,18 @@ jobs:
           APP_DIR=$(find derivedData/Build/Products/Release-iphoneos -name "*.app" -type d -print -quit)
           mv "$APP_DIR" Payload/
           zip -qr -9 app.ipa Payload
-          mv app.ipa ../TapCount_TrollStore.ipa
+          mv app.ipa ../course-countdown.ipa
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TapCount_TrollStore_IPA
-          path: TapCount_TrollStore.ipa
+          name: course-countdown.ipa
+          path: course-countdown.ipa
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: trollstore-build
+          name: Latest TrollStore Build
+          files: course-countdown.ipa
+          body: "Tự động build bản cập nhật mới nhất cho ứng dụng TrollStore."
