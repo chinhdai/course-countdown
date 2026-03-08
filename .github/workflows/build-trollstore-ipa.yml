@@ -31,7 +31,8 @@ jobs:
         run: |
           cd ios
           WORKSPACE=$(find . -maxdepth 1 -name "*.xcworkspace" -print -quit)
-          SCHEME=$(xcodebuild -workspace "$WORKSPACE" -list -json | python3 -c "import sys, json; print(json.load(sys.stdin)['workspace']['schemes'][0])")
+          # Hardcoding the scheme to match the Expo project name without special characters/numbers which might confuse the build
+          SCHEME="_60203_Tap_Count"
           echo "Building Workspace: $WORKSPACE with Scheme: $SCHEME"
           
           xcodebuild clean build \
