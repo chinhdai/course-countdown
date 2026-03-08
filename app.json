@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "260203_Tap_Count",
-    "slug": "260203_Tap_Count",
+    "name": "Đếm ngược khóa học",
+    "slug": "course-countdown",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
