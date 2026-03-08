@@ -31,7 +31,7 @@ jobs:
         run: |
           cd ios
           WORKSPACE=$(find . -maxdepth 1 -name "*.xcworkspace" -print -quit)
-          SCHEME=$(xcodebuild -workspace "$WORKSPACE" -list | awk '/Schemes:/{for(i=1;i<=3;i++){getline; if ($1 != "") {print $1; exit}}}' )
+          SCHEME=$(xcodebuild -workspace "$WORKSPACE" -list -json | python3 -c "import sys, json; print(json.load(sys.stdin)['workspace']['schemes'][0])")
           echo "Building Workspace: $WORKSPACE with Scheme: $SCHEME"
           
           xcodebuild clean build \
