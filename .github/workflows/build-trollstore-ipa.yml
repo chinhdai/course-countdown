@@ -1,4 +1,4 @@
-name: Build TrollStore IPA
+name: Build course-countdown TrollStore IPA
 
 on:
   workflow_dispatch:
