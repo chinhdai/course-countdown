@@ -1,28 +1,52 @@
-import React from 'react';
+import React, { useCallback, memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, BookOpen } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 
-export default function HomeScreen({ courses, onSelectCourse, onAddNew }) {
-    const renderItem = ({ item }) => {
-        const progressPercentage = (item.daysCounted / item.totalDays) * 100;
-        return (
-            <TouchableOpacity
-                style={styles.courseCard}
-                onPress={() => onSelectCourse(item)}
-                activeOpacity={0.7}
-            >
-                <View style={styles.courseHeader}>
-                    <Text style={styles.courseName}>{item.name}</Text>
-                    <Text style={styles.courseCount}>{item.daysCounted}/{item.totalDays}</Text>
-                </View>
-                <View style={styles.progressBarBackground}>
-                    <View style={[styles.progressBarFill, { width: `${progressPercentage}%` }]} />
-                </View>
-            </TouchableOpacity>
-        );
+const CourseCard = memo(({ item, onPress }) => {
+    const progressPercentage = Math.min((item.daysCounted / item.totalDays) * 100, 100);
+    const lastLog = item.attendanceLogs && item.attendanceLogs.length > 0
+        ? item.attendanceLogs[item.attendanceLogs.length - 1]
+        : null;
+
+    const formatLastAttendance = (isoString) => {
+        const date = new Date(isoString);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${day}/${month} lúc ${hours}:${minutes}`;
     };
+
+    return (
+        <TouchableOpacity
+            style={styles.courseCard}
+            onPress={() => onPress(item)}
+            activeOpacity={0.7}
+        >
+            <View style={styles.courseHeader}>
+                <Text style={styles.courseName} numberOfLines={1}>{item.name}</Text>
+                <Text style={styles.courseCount}>{item.daysCounted}/{item.totalDays}</Text>
+            </View>
+            <View style={styles.progressBarBackground}>
+                <View style={[styles.progressBarFill, { width: `${progressPercentage}%` }]} />
+            </View>
+            {lastLog && (
+                <Text style={styles.lastAttendance}>
+                    Lần cuối: {formatLastAttendance(lastLog.timestamp)}
+                </Text>
+            )}
+        </TouchableOpacity>
+    );
+});
+
+export default function HomeScreen({ courses, onSelectCourse, onAddNew }) {
+    const renderItem = useCallback(({ item }) => (
+        <CourseCard item={item} onPress={onSelectCourse} />
+    ), [onSelectCourse]);
+
+    const keyExtractor = useCallback((item) => item.id, []);
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -42,10 +66,11 @@ export default function HomeScreen({ courses, onSelectCourse, onAddNew }) {
                 ) : (
                     <FlatList
                         data={courses}
-                        keyExtractor={item => item.id}
+                        keyExtractor={keyExtractor}
                         renderItem={renderItem}
                         showsVerticalScrollIndicator={false}
                         contentContainerStyle={styles.listContainer}
+                        removeClippedSubviews={true}
                     />
                 )}
 
@@ -82,7 +107,7 @@ const styles = StyleSheet.create({
         color: theme.colors.text,
     },
     listContainer: {
-        paddingBottom: 100, // padding for FAB
+        paddingBottom: 100,
     },
     courseCard: {
         backgroundColor: theme.colors.card,
@@ -119,6 +144,11 @@ const styles = StyleSheet.create({
         height: '100%',
         backgroundColor: theme.colors.primary,
         borderRadius: theme.radius.round,
+    },
+    lastAttendance: {
+        fontSize: 12,
+        color: theme.colors.textSecondary,
+        marginTop: theme.spacing.sm,
     },
     emptyState: {
         flex: 1,

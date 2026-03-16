@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, StyleSheet, ActivityIndicator, StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,8 +10,9 @@ import { theme } from './src/styles/theme';
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [courses, setCourses] = useState([]);
-  const [currentScreen, setCurrentScreen] = useState('home'); // 'home', 'setup', 'dashboard'
+  const [currentScreen, setCurrentScreen] = useState('home');
   const [selectedCourseId, setSelectedCourseId] = useState(null);
+  const saveTimerRef = useRef(null);
 
   useEffect(() => {
     loadData();
@@ -21,9 +22,15 @@ export default function App() {
     try {
       const storedCourses = await AsyncStorage.getItem('@courses');
       if (storedCourses !== null) {
-        setCourses(JSON.parse(storedCourses));
+        const parsed = JSON.parse(storedCourses);
+        // Migrate: ensure attendanceLogs exists on all courses
+        const migrated = parsed.map(c => ({
+          ...c,
+          attendanceLogs: c.attendanceLogs || [],
+        }));
+        setCourses(migrated);
       } else {
-        checkLegacyData();
+        await checkLegacyData();
       }
     } catch (e) {
       console.error('Failed to load data', e);
@@ -33,61 +40,105 @@ export default function App() {
   };
 
   const checkLegacyData = async () => {
-    // Migrate old data if it exists
-    const storedTotal = await AsyncStorage.getItem('@total_days');
-    const storedCount = await AsyncStorage.getItem('@days_counted');
-
-    if (storedTotal !== null && storedCount !== null) {
-      const legacyCourse = {
-        id: 'legacy-course',
-        name: 'Khóa học cũ',
-        totalDays: parseInt(storedTotal, 10),
-        daysCounted: parseInt(storedCount, 10),
-        balloonText: 'Thùy Anh'
-      };
-      setCourses([legacyCourse]);
-      await AsyncStorage.setItem('@courses', JSON.stringify([legacyCourse]));
-      await AsyncStorage.removeItem('@total_days');
-      await AsyncStorage.removeItem('@days_counted');
-    }
-  };
-
-  const handleSetupComplete = async (newCourse) => {
     try {
-      const updatedCourses = [...courses, newCourse];
-      await AsyncStorage.setItem('@courses', JSON.stringify(updatedCourses));
-      setCourses(updatedCourses);
-      setCurrentScreen('home');
+      const storedTotal = await AsyncStorage.getItem('@total_days');
+      const storedCount = await AsyncStorage.getItem('@days_counted');
+      if (storedTotal !== null && storedCount !== null) {
+        const legacyCourse = {
+          id: 'legacy-course',
+          name: 'Khóa học cũ',
+          totalDays: parseInt(storedTotal, 10),
+          daysCounted: parseInt(storedCount, 10),
+          balloonText: 'Thùy Anh',
+          attendanceLogs: [],
+        };
+        const updated = [legacyCourse];
+        setCourses(updated);
+        await AsyncStorage.setItem('@courses', JSON.stringify(updated));
+        await AsyncStorage.removeItem('@total_days');
+        await AsyncStorage.removeItem('@days_counted');
+      }
     } catch (e) {
-      console.error('Failed to save setup data', e);
+      console.error('Failed to migrate legacy data', e);
     }
   };
 
-  const handleIncrement = () => {
-    try {
-      const updatedCourses = courses.map(c => {
+  // Debounce saves to avoid excessive AsyncStorage writes on rapid taps
+  const scheduleSave = useCallback((updatedCourses) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      AsyncStorage.setItem('@courses', JSON.stringify(updatedCourses))
+        .catch(e => console.error('Failed to save courses', e));
+    }, 300);
+  }, []);
+
+  const handleSetupComplete = useCallback((newCourse) => {
+    const courseWithLogs = { ...newCourse, attendanceLogs: [] };
+    setCourses(prev => {
+      const updated = [...prev, courseWithLogs];
+      AsyncStorage.setItem('@courses', JSON.stringify(updated))
+        .catch(e => console.error('Failed to save new course', e));
+      return updated;
+    });
+    setCurrentScreen('home');
+  }, []);
+
+  const handleIncrement = useCallback(() => {
+    const log = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+    };
+    setCourses(prev => {
+      const updated = prev.map(c => {
         if (c.id === selectedCourseId && c.daysCounted < c.totalDays) {
-          return { ...c, daysCounted: c.daysCounted + 1 };
+          return {
+            ...c,
+            daysCounted: c.daysCounted + 1,
+            attendanceLogs: [...(c.attendanceLogs || []), log],
+          };
         }
         return c;
       });
-      setCourses(updatedCourses);
-      AsyncStorage.setItem('@courses', JSON.stringify(updatedCourses)).catch(e => console.error(e));
-    } catch (e) {
-      console.error('Failed to update count', e);
-    }
-  };
+      scheduleSave(updated);
+      return updated;
+    });
+  }, [selectedCourseId, scheduleSave]);
 
-  const handleDeleteCourse = async () => {
-    try {
-      const updatedCourses = courses.filter(c => c.id !== selectedCourseId);
-      setCourses(updatedCourses);
-      await AsyncStorage.setItem('@courses', JSON.stringify(updatedCourses));
-      setCurrentScreen('home');
-    } catch (e) {
-      console.error('Failed to delete course', e);
-    }
-  };
+  const handleDecrement = useCallback(() => {
+    setCourses(prev => {
+      const updated = prev.map(c => {
+        if (c.id === selectedCourseId && c.daysCounted > 0) {
+          const logs = c.attendanceLogs || [];
+          return {
+            ...c,
+            daysCounted: c.daysCounted - 1,
+            attendanceLogs: logs.slice(0, -1),
+          };
+        }
+        return c;
+      });
+      scheduleSave(updated);
+      return updated;
+    });
+  }, [selectedCourseId, scheduleSave]);
+
+  const handleDeleteCourse = useCallback(() => {
+    setCourses(prev => {
+      const updated = prev.filter(c => c.id !== selectedCourseId);
+      AsyncStorage.setItem('@courses', JSON.stringify(updated))
+        .catch(e => console.error('Failed to delete course', e));
+      return updated;
+    });
+    setCurrentScreen('home');
+  }, [selectedCourseId]);
+
+  const handleSelectCourse = useCallback((course) => {
+    setSelectedCourseId(course.id);
+    setCurrentScreen('dashboard');
+  }, []);
+
+  const handleBack = useCallback(() => setCurrentScreen('home'), []);
+  const handleAddNew = useCallback(() => setCurrentScreen('setup'), []);
 
   if (isLoading) {
     return (
@@ -107,18 +158,15 @@ export default function App() {
         {currentScreen === 'home' && (
           <HomeScreen
             courses={courses}
-            onSelectCourse={(course) => {
-              setSelectedCourseId(course.id);
-              setCurrentScreen('dashboard');
-            }}
-            onAddNew={() => setCurrentScreen('setup')}
+            onSelectCourse={handleSelectCourse}
+            onAddNew={handleAddNew}
           />
         )}
 
         {currentScreen === 'setup' && (
           <SetupScreen
             onSetupComplete={handleSetupComplete}
-            onCancel={() => setCurrentScreen('home')}
+            onCancel={handleBack}
             hasCourses={courses.length > 0}
           />
         )}
@@ -127,8 +175,9 @@ export default function App() {
           <DashboardScreen
             course={selectedCourse}
             onIncrement={handleIncrement}
+            onDecrement={handleDecrement}
             onDelete={handleDeleteCourse}
-            onBack={() => setCurrentScreen('home')}
+            onBack={handleBack}
           />
         )}
       </View>
