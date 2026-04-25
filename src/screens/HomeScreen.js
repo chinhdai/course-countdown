@@ -4,20 +4,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, BookOpen } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 
+const formatLastAttendance = (isoString) => {
+    const date = new Date(isoString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${day}/${month} lúc ${hours}:${minutes}`;
+};
+
 const CourseCard = memo(({ item, onPress }) => {
     const progressPercentage = Math.min((item.daysCounted / item.totalDays) * 100, 100);
     const lastLog = item.attendanceLogs && item.attendanceLogs.length > 0
         ? item.attendanceLogs[item.attendanceLogs.length - 1]
         : null;
-
-    const formatLastAttendance = (isoString) => {
-        const date = new Date(isoString);
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        return `${day}/${month} lúc ${hours}:${minutes}`;
-    };
 
     return (
         <TouchableOpacity

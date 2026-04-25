@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import SetupScreen from './src/screens/SetupScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import HomeScreen from './src/screens/HomeScreen';
+import ErrorBoundary from './src/components/ErrorBoundary';
 import { theme } from './src/styles/theme';
 
 export default function App() {
@@ -63,29 +64,38 @@ export default function App() {
     }
   };
 
-  // Debounce saves to avoid excessive AsyncStorage writes on rapid taps
-  const scheduleSave = useCallback((updatedCourses) => {
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      AsyncStorage.setItem('@courses', JSON.stringify(updatedCourses))
+  // Unified save: cancels any pending debounced write before persisting.
+  // Without this, an immediate save (add/delete course) could be overwritten
+  // by a stale debounced save scheduled from earlier rapid taps.
+  const persistCourses = useCallback((updated, immediate = false) => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    if (immediate) {
+      AsyncStorage.setItem('@courses', JSON.stringify(updated))
         .catch(e => console.error('Failed to save courses', e));
-    }, 300);
+    } else {
+      saveTimerRef.current = setTimeout(() => {
+        AsyncStorage.setItem('@courses', JSON.stringify(updated))
+          .catch(e => console.error('Failed to save courses', e));
+      }, 300);
+    }
   }, []);
 
   const handleSetupComplete = useCallback((newCourse) => {
     const courseWithLogs = { ...newCourse, attendanceLogs: [] };
     setCourses(prev => {
       const updated = [...prev, courseWithLogs];
-      AsyncStorage.setItem('@courses', JSON.stringify(updated))
-        .catch(e => console.error('Failed to save new course', e));
+      persistCourses(updated, true);
       return updated;
     });
     setCurrentScreen('home');
-  }, []);
+  }, [persistCourses]);
 
   const handleIncrement = useCallback(() => {
     const log = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       timestamp: new Date().toISOString(),
     };
     setCourses(prev => {
@@ -99,10 +109,10 @@ export default function App() {
         }
         return c;
       });
-      scheduleSave(updated);
+      persistCourses(updated);
       return updated;
     });
-  }, [selectedCourseId, scheduleSave]);
+  }, [selectedCourseId, persistCourses]);
 
   const handleDecrement = useCallback(() => {
     setCourses(prev => {
@@ -117,20 +127,19 @@ export default function App() {
         }
         return c;
       });
-      scheduleSave(updated);
+      persistCourses(updated);
       return updated;
     });
-  }, [selectedCourseId, scheduleSave]);
+  }, [selectedCourseId, persistCourses]);
 
   const handleDeleteCourse = useCallback(() => {
     setCourses(prev => {
       const updated = prev.filter(c => c.id !== selectedCourseId);
-      AsyncStorage.setItem('@courses', JSON.stringify(updated))
-        .catch(e => console.error('Failed to delete course', e));
+      persistCourses(updated, true);
       return updated;
     });
     setCurrentScreen('home');
-  }, [selectedCourseId]);
+  }, [selectedCourseId, persistCourses]);
 
   const handleSelectCourse = useCallback((course) => {
     setSelectedCourseId(course.id);
@@ -152,35 +161,37 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <View style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background} />
+      <ErrorBoundary>
+        <View style={styles.container}>
+          <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background} />
 
-        {currentScreen === 'home' && (
-          <HomeScreen
-            courses={courses}
-            onSelectCourse={handleSelectCourse}
-            onAddNew={handleAddNew}
-          />
-        )}
+          {currentScreen === 'home' && (
+            <HomeScreen
+              courses={courses}
+              onSelectCourse={handleSelectCourse}
+              onAddNew={handleAddNew}
+            />
+          )}
 
-        {currentScreen === 'setup' && (
-          <SetupScreen
-            onSetupComplete={handleSetupComplete}
-            onCancel={handleBack}
-            hasCourses={courses.length > 0}
-          />
-        )}
+          {currentScreen === 'setup' && (
+            <SetupScreen
+              onSetupComplete={handleSetupComplete}
+              onCancel={handleBack}
+              hasCourses={courses.length > 0}
+            />
+          )}
 
-        {currentScreen === 'dashboard' && selectedCourse && (
-          <DashboardScreen
-            course={selectedCourse}
-            onIncrement={handleIncrement}
-            onDecrement={handleDecrement}
-            onDelete={handleDeleteCourse}
-            onBack={handleBack}
-          />
-        )}
-      </View>
+          {currentScreen === 'dashboard' && selectedCourse && (
+            <DashboardScreen
+              course={selectedCourse}
+              onIncrement={handleIncrement}
+              onDecrement={handleDecrement}
+              onDelete={handleDeleteCourse}
+              onBack={handleBack}
+            />
+          )}
+        </View>
+      </ErrorBoundary>
     </SafeAreaProvider>
   );
 }

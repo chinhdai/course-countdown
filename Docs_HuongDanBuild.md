@@ -32,7 +32,9 @@ Thực tế, iPhone không hiểu JavaScript trực tiếp để hiển thị gi
 
 **Giải thích chi tiết:**
 *   **Swift** là ngôn ngữ mẹ đẻ (Native) do chính Apple tạo ra. Khi bạn viết ứng dụng bằng Swift, code sẽ giao tiếp trực tiếp với bộ xử lý (CPU) và bộ nhớ của iPhone mà không cần qua trung gian. Do đó, các hiệu ứng hình ảnh (như bóng bay nổi lên), tốc độ khởi động, hay tốc độ lưu dữ liệu sẽ mượt mà, phản hồi ngay lập tức đến từng mili-giây. Bạn kiểm soát được 100% phần cứng.
-*   **React Native (JavaScript)** lại hoạt động qua một lớp trung gian (gọi là *JavaScript Bridge*). Khi bạn bấm nút (đây là sự kiện bên hệ điều hành iOS), tín hiệu phải "chạy qua cầu" gửi sang bên JavaScript để tính toán, JavaScript tính xong lại đẩy lệnh "vẽ màn hình" qua cầu ngược về cho iOS. Sự "chạy qua chạy lại" này đôi khi (nếu viết code không khéo) sẽ gây ra độ trễ (như bạn vừa gặp phải lúc bấm quá nhanh).
+*   **React Native (JavaScript)** lúc trước hoạt động qua một lớp trung gian (gọi là *JavaScript Bridge*). Khi bạn bấm nút (đây là sự kiện bên hệ điều hành iOS), tín hiệu phải "chạy qua cầu" gửi sang bên JavaScript để tính toán, JavaScript tính xong lại đẩy lệnh "vẽ màn hình" qua cầu ngược về cho iOS. Sự "chạy qua chạy lại" này đôi khi (nếu viết code không khéo) sẽ gây ra độ trễ.
+
+> **Cập nhật 2025+:** Từ React Native 0.74 trở đi, "JavaScript Bridge" đã được thay bằng kiến trúc mới (**New Architecture** với JSI - JavaScript Interface). JavaScript có thể gọi trực tiếp các hàm Native qua con trỏ bộ nhớ chung, không cần serialize/deserialize qua cầu nữa. Tốc độ phản hồi đã được cải thiện rất nhiều. Dự án này (Expo SDK 54 / RN 0.81) đang sử dụng New Architecture mặc định.
 
 **Tuy nhiên, thực tế hiện nay (Kỳ Lọng):**
 1.  **Khoảng cách đã được thu hẹp:** Với kiến trúc mới của React Native (New Architecture) và các thư viện hiện đại, tốc độ của React Native hiện nay được đánh giá là đủ tốt (khoảng 80-90% sức mạnh của ứng dụng Native). Chỗ bạn thấy bị đơ là do lỗi *thiết kế tối ưu thuật toán* (Tôi để AsyncStorage chặn việc vẽ màn hình) chứ không hẳn do giới hạn gốc của React Native. 

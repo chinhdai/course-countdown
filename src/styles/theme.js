@@ -5,7 +5,7 @@ export const theme = {
         background: '#F2F2F7', // iOS Grouped Background
         card: '#FFFFFF',
         text: '#000000',
-        textSecondary: '#3C3C43', // 60% opacity look
+        textSecondary: 'rgba(60,60,67,0.6)', // iOS secondary label (60% opacity)
         border: '#C6C6C8',
         success: '#34C759', // iOS Green
         danger: '#FF3B30', // iOS Red

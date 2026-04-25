@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
 import {
     View,
     Text,
@@ -39,6 +39,7 @@ const FloatingText = memo(({ id, startX, text, onComplete }) => {
                 useNativeDriver: true,
             })
         ]).start(() => onComplete(id));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (
@@ -64,6 +65,7 @@ export default function DashboardScreen({ course, onIncrement, onDecrement, onDe
     const progressPercentage = Math.min((course.daysCounted / course.totalDays) * 100, 100);
     const isCompleted = course.daysCounted >= course.totalDays;
     const attendanceLogs = course.attendanceLogs || [];
+    const reversedLogs = useMemo(() => [...attendanceLogs].reverse(), [attendanceLogs]);
 
     const handleTap = useCallback(() => {
         onIncrement();
@@ -210,17 +212,17 @@ export default function DashboardScreen({ course, onIncrement, onDecrement, onDe
                                 </View>
                             </View>
 
-                            {[...attendanceLogs].reverse().map((log, index) => (
+                            {reversedLogs.map((log, index) => (
                                 <View
                                     key={log.id}
                                     style={[
                                         styles.historyItem,
-                                        index < attendanceLogs.length - 1 && styles.historyItemBorder,
+                                        index < reversedLogs.length - 1 && styles.historyItemBorder,
                                     ]}
                                 >
                                     <View style={styles.historySessionBadge}>
                                         <Text style={styles.historySessionText}>
-                                            {attendanceLogs.length - index}
+                                            {reversedLogs.length - index}
                                         </Text>
                                     </View>
                                     <Text style={styles.historyDate}>{formatDateTime(log.timestamp)}</Text>
